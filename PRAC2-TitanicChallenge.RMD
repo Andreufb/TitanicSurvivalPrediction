@@ -1,0 +1,798 @@
+---
+title: 'Practica 2 - Neteja, validació i predicció de dades'
+author: "Autor: Andreu Fornós Bautista"
+date: "Maig 2021"
+output:
+  html_document:
+    highlight: default
+    number_sections: yes
+    theme: cosmo
+    toc: yes
+    toc_depth: 2
+  word_document: default
+  pdf_document:
+    highlight: zenburn
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+*****
+# Presentació
+*****
+
+En llegir l'enunciat i navegar per Kaggle he trobat una gran multitud de datasets interesants; alguns amb reptes associats amb molt bona pinta però finalment he decidit treballar amb el dataset del Titanic sugerit a la pràctica per dos motius principals:
+1) Sempre m'han agradat les competicions informàtiques, per mi la competició és de les millors maneres d'aprendre i, en aquest cas, hi ha un repte actiu fent que després de dos anys sense anar a cap Hackaton em resulti atractiu entrar en alguna mena de competició on pugui aportar la meva manera de programar i enfrentar problemes.
+2) L'accident del Titanic és molt controversial pel que fa a la gent que va sobreviure, per alguna cosa hi ha aquest repte de trobar el millor algoritme de predicció de la supervivència tenint en compte els atributs associats als pasatgers. D'aquesta manera, m'agradaria entendre millor de que depenia la supervivència de la gent que va embarcar ja que pareix que el seu destí estava determinat avans d'embarcar.
+
+*****
+# Objectius
+*****
+
+Els objectius de la realització d'aquesta pràctica amb el dataset seleccionat són la descripció del dataset per entendren els atributs i forma d'aquest a la perfecció seguit de la seva correcta integració. A continuació, faré una neteja de les dades per tenir-les amb el format correcte per a poder-les analitzar, graficar i usar per generar un arbre de decisió com a model predictiu ja que, a part de donar bons resultats, n'hi ha que també mostren les regles usades i, aquestes, seràn de gran utilitat a l'hora d'extraure conclusions a l'hora de determinar si una persona sobreviurà o no. A tot això, també m'agradaria generar algún atribut nou ja que amb el dataset tal i com està no crec que pugui generar un model predictiu millor del que ja han generat.
+
+*****
+# Descripció del dataset
+*****
+
+El dataset es divideix en dos; un per entrenar el model predictiu de mineria de dades i un per aplicar-li el model per entrar a la competició. D'aquesta manera, el conjunt de dades està format pel fitxer CSV amb les dades d'entrenament [train.csv](https://www.kaggle.com/c/titanic/data?select=train.csv) i el de test [test.csv](https://www.kaggle.com/c/titanic/data?select=test.csv).
+
+Un cop descargats només cargo el dataset d'entrenament per fer-ne la neteja i anàlisis. No els junto ni treballo amb els dos perquè el dataset de test no conté la columna que indica si els pasatgers van sobreviure o no. D'aquesta manera només trballaré amb el dataset d'entrenament fins generar un model predictiu que em sembli lo suficientment bó com per aplicar-li al dataset de test.
+```{r message= FALSE, warning=FALSE}
+# Cargo el dataset d'entrenament
+dataset <- read.csv("./train.csv",header=T,sep=",")
+
+# En miro la mida i tipus d'atributs amb la funcionalitat str()
+str(dataset)
+```
+Tal i com s'observa aquest dataset està format per 891 valors per cadascuna de les 12 columnes (atributs). Amb aquesta informació i amb la donada en l'apartat de Kraggle que parla sobre aquest dataset (https://www.kaggle.com/c/titanic/overview) es pot fer una breu descripció dels atributs continguts en el dataset:
+
+**PassengerId**
+    Atribut numèric, identificador únic de cada pasatger.
+    
+**Survived**
+    Atribut numèric, indica si el pasatger va sobreviure; el valor 0 per als que no van sobreviure i el valor 1 per als que sí.
+    
+**Pclass**
+    Atrbitu numèric, indica la classe del tiquet; 1 per priemra classe, 2 per 2na i 3 per 3ra.
+    
+**Name**
+    Atribut de text, nom del pasatger.
+    
+**Sex**
+    Atribut categòric, indica si el pasatger era home "male" o dona "female".
+    
+**Age**
+    Atribut numèric, edat del pasatger.
+    
+**SibSp**
+    Atrbitu numèric, número de germans i conjugues que tenia el pasatger.
+    
+**Parch**
+    Atribut numèric, número de pares i fills que tenia el pasatger.
+    
+**Ticket**
+    Atribut de text, indicador/nom del tiquet del pasatger.
+    
+**Fare**
+    Atribut numèric, tarifa pagada pel pasatger.
+    
+**Cabin**
+    Atrbitu numèric, indicador de la cabina habitada pel pasatger.
+    
+**Embarked**
+    Atribut categòric, port d'embarcament; C per Cherbourg, Q per Queenstown i S per Southampton.
+
+
+Un cop he identificats i descrits els atributs del dataset, en verifico l'estructura mirant-ne un resum estadistic:
+```{r message= FALSE, warning=FALSE}
+# Resum estadistic del dataset
+summary(dataset)
+```
+Tal i com s'observa l'atribut PassengerId està ben generat ja que no hi ha números repetits: mediana i mitjana iguals on el valor va d'1 a 891 sent aquest el número de registres del dataset. Pel que fa a l'atribut Survived aquí ja s'intueix que la majoria no van sobreviure; la mitjana és 0.38 indicant així que només va sobreviure el 38% dels pasatgers d'aquest dataset. Ara, fixant-nos amb l'atribut Pclass, s'observa com al menys el 50% dels pasatgers eren de la tercera classe (mediana de 3), bastant lògic ja que no devia haber molts villets de primera classe. A continuació, pel que fa a l'atribut Age, s'observa com havia 177 persones de les que no es sabia l'edat, el 75% dels pasatgers eren menors de 38 anys i el rang d'edat anava dels 0.42 anys (uns 5 mesos) fins els 80. Quasi per acabar, fixant-nos amb els atributs SibSp i Parch, es pot extaure que la majoria de gent viatjava sense familia propera (ni germans, ni fills, ni pares, ni conjugues) encara que n'havia alguns que si estaven acompanyats per molts membres de la familia; hi ha almenys un pasatger que viatjava amb 8 germans i conjugues i un altre que viatjava amb 6 pares i fills. Finalment, mirant l'atribut Fare, s'observa com la gran majoria de villets costaven menys de 30 dolars, normal tenint en compte que la gran majoria de villets eren de tercera classe, i que se'n van arribar a vendre per més de 500$.
+
+Per acabar amb la descripció seria interessant veure els valors nuls o inexistents que conté el dataset per veure'n la completesa i, adicionalment, dicidir si s'ha de fer algo al respecte:
+```{r}
+# Mostro els valors nuls que conté cada columna
+colSums(is.na(dataset))
+# Mostro els valors vuits que conté cada columna de text
+colSums(dataset=="")
+```
+Tal i com s'observa la columna Age conté 177 valors nuls, la columna Cabin 687 valors vuits i la columna Embarked 2.
+
+*****
+# Neteja del dataset
+*****
+
+Un cop descrit i estudiat superficialment el dataset procedeixo a fer-ne una neteja d'atributs i valors
+
+## Completesa, adaptació i selecció de les dades
+
+Primerament, com hi ha valors inexistents en algunes columnes, vaig a deixar el dataset complet fent les accions pertinents. D'aquesta manera he decidit:
+1) Atribut Age: Conté 177 valors nuls; com tampoc són tants els intentaré interpolar amb les altres dades del dataset per no perdre aquests registres.
+2) Atribut Cabin: No té valor per 687 dels 891 registres; és una incompletesa enorme fent que no ens serveixi de res d'aquesta manera així que finalment com a simple vista tampoc pareix molt important, he decidit eliminar-la.
+3) Atribut Embarked: Conté dos valors vuits, és insignificant tenint en compte la totalitat del dataset i, en ser un atribut categòric, no es pot interpolar facilment. D'aquesta manera, com per als anàlisis que faré segurament m'anirà millor tenir més atributs numèrics, converitiré l'atribut en factorial i, després, li interpolaré els dos valors faltants.
+```{r}
+# Instalo la llibreria zoo si no està instalada i la crido
+if (!require('zoo')) install.packages("zoo"); library('zoo')
+
+# Interpolo els valors de l'atribut Age i els guardo a la mateixa columna
+dataset$Age <- na.approx(dataset$Age)
+
+# Elimino la columna Cabin del dataset
+dataset <- dataset[ , !(names(dataset) %in% c("Cabin"))]
+
+# Converteixo els valors inexistents de la columna Embarked en valors nuls
+dataset <- within(dataset, Embarked[Embarked==""] <- NA)
+# Converteixo la columna Embarked en factorial
+dataset$Embarked <- as.factor(dataset$Embarked)
+# Interpolo els valors nuls de la columna Embarked
+dataset$Embarked <- na.approx(dataset$Embarked)
+
+
+# Referències:
+# https://stackoverflow.com/questions/50166851/r-na-approx-error-need-at-least-two-non-na-values-to-interpolate
+# https://stackoverflow.com/questions/25625476/interpolate-multiple-na-values-with-r
+# https://stackoverflow.com/questions/8214303/conditional-replacement-of-values-in-a-data-frame
+# https://stackoverflow.com/questions/20637360/convert-all-data-frame-character-columns-to-factors
+# https://stackoverflow.com/questions/4605206/drop-data-frame-columns-by-name
+```
+
+Un cop aplicats els canvis definits, torno a comprovar la completesa del dataset per veure que tot hagi funcionat bé:
+```{r}
+colSums(is.na(dataset))
+colSums(dataset=="")
+```
+El dataset ja està complet, no té dades amb valors nuls o inexistents.
+
+Per acabar amb aquest apartat, mirant la definició de les columnes, he decidit eliminar els següents 3 atributs:
+- PassengerId: No ens serveix per fer un model predictiu, l'únic que farà és envolicar el model ja que els valors que conté són idetificadors únics dels pasatgers que res tenen a veure amb les seves probabilitats de supervivència.
+- Name: Cada persona té un nom diferents i, a més a més, no té perqué influir en la probabiltiat de supervivència del pasatger.
+- Ticket: Mirant els seus valors s'observa com no segueixen cap tipus de patró clar i, a simple vista, pareix que quasi no hi ha valors repetits fent que tampoc ens serveixi per a molt en un model predictiu.
+
+Per corroborar les hipòtesis miro els valors únics de cada una d'aquestes columnes a eliminar:
+```{r}
+print(length(unique(dataset$PassengerId)))
+print(length(unique(dataset$Name)))
+print(length(unique(dataset$Ticket)))
+
+
+# Referències:
+# https://discuss.analyticsvidhya.com/t/how-to-count-number-of-distinct-values-in-a-column-of-a-data-table-in-r/1124
+```
+Un cop corroborat que tots o la gran majoria dels valors d'aquestes columnes són únics, procedeixo a eliminar-les:
+```{r}
+dataset <- dataset[ , !(names(dataset) %in% c('PassengerId', 'Name', 'Ticket'))]
+```
+
+Finalment, aprofitant que l'únic atribut categòric que queda al dataset és Sex i per acabar amb les modificacions d'aquest apartat, converteixo l'atribut Sex en numèric per poder aplicar millor els resums estadistics i modificacions pertinents:
+```{r}
+# Si el valor és male afegeixo un 1 i si és female afegeixo un 0
+dataset$Sex <- ifelse(dataset$Sex=="male", 1, 0)
+```
+
+D'aquesta manera, ja tenim tots els atributs del dataset en format numèric i sense dades faltants.
+
+
+## Outliers
+
+Un cop tenim el dataset complet i amb els atributs que volem, n'estudio els posibles valors erronis/extrems que conté ja que podrien esviaixar molt els resultats del model. Per fer-ho, començo amb un estudi visual dels valors extrems mitjançant la creació de boxplots dels quatre atributs que crec podrien tenir-ne i en l'extracció dels indexs d'aquests valors per verue quants n'hi ha:
+```{r}
+# Instalo la llibreria zoo si no està instalada i la crido
+if (!require('ggplot2')) install.packages("ggplot2"); library('ggplot2')
+
+# Extrec els outliers de l'atribut Age, SibSp, Parch i Fare 
+age_outliers    <- boxplot.stats(dataset$Age)$out
+sibsp_outliers  <- boxplot.stats(dataset$SibSp)$out
+parch_outliers  <- boxplot.stats(dataset$Parch)$out
+fare_outliers   <- boxplot.stats(dataset$Fare)$out
+
+# Afegeixo els index de de les files on posiblemenet hi ha outliers
+outliers_index <- c(which(dataset$Age %in% c(age_outliers)), 
+                    which(dataset$SibSp %in% c(sibsp_outliers)), 
+                    which(dataset$Parch %in% c(parch_outliers)),  
+                    which(dataset$Fare %in% c(fare_outliers)))
+
+# Mostro per pantalla el número d'outliers detectats per la funcionalitat boxplot
+cat('There is', length(unique(outliers_index)), 'outliers, it is equal to a', length(unique(outliers_index))/891*100 ,'% of the data')
+
+# A continuació genero un boxplot per cada un d'aquests 4 atributs per separat.
+ggplot(dataset) +
+  aes(x = "", y = Age) +
+  geom_boxplot(fill = "#0c4c8a") +
+  theme_minimal()
+
+ggplot(dataset) +
+  aes(x = "", y = SibSp) +
+  geom_boxplot(fill = "#0c4c8a") +
+  theme_minimal()
+
+ggplot(dataset) +
+  aes(x = "", y = Parch) +
+  geom_boxplot(fill = "#0c4c8a") +
+  theme_minimal()
+
+ggplot(dataset) +
+  aes(x = "", y = Fare) +
+  geom_boxplot(fill = "#0c4c8a") +
+  theme_minimal()
+
+
+# Referències:
+# https://statsandr.com/blog/outliers-detection-in-r/#boxplot
+# https://www.geeksforgeeks.org/adding-elements-in-a-vector-in-r-programming-append-method/
+# https://www.tutorialspoint.com/how-to-concatenate-two-or-more-vectors-in-r
+# https://stackoverflow.com/questions/15589601/print-string-and-variable-contents-on-the-same-line-in-r
+```
+Tal i com s'observa s'han detectat outliers a 295 files diferents; és un nombre d'outliers massa gran per ser acceptable ja que tenen un pes superiro al 33% del total de dades i, per tant, no ens podem permitir eliminar-les, al menys sense fer un estudi més exhaustiu. D'aquesta manera, procedeixo a fixar-me amb els boxplots generats:
+1) Boxplot Age: Es veu una bona distribució amb uns quants outliers ja que detecta com a outlier edats superior als 63 (més o menys). No els accepto com a vàlids ja que és molt possible que les dades siguin reals l'únic que havia pocs pasatgers amb aquesta edat i, per tant, no eliminaré aquestes files.
+2) Boxplot SibSp i Parch: Cap dels dos té una bona distirbució però els outliers marcats podrien ser dades certes ja que en aquesta època la gent tenia molts fills fent que haguesin families numeroses. Així, encara que la majoria de gent viatjava sola podria ser que viatjesin families grans i, per tant, he decidit no tractar aquests valors com a outliers.
+3) Boxplot Fare: No se com anava la compra-venta de villets a l'època però tenint en compte que havia tres clases amb molts més tiquets de tercera clase (més barats) no és d'extranyar que es marquin com a outliers els villets que comprava la gent de primera clase i, per tant, no els considero outliers. Encara així, hi ha un villet que es va vendre per més de 500$, podria ser que van estafar a algú o que havia una cavina molt VIP però l'elimino per averiguar, ja que estic, una manera d'eliminar outliers.
+
+D'aquesta manera, procedeixo a eliminar l'outlier definit a Fare:
+```{r}
+# Extrec el valor màxim de fare_outliers i em quedo amb les files on el valor de Fare és diferent a aquest
+dataset <- dataset[dataset$Fare != max(fare_outliers),]
+
+# Referències:
+# https://statisticsglobe.com/r-max-min-function/
+# https://statisticsglobe.com/r-remove-row-from-data-frame-condition
+```
+Tal i com s'observa s'han eliminat 3 entrades indicant així que es van vendre 3 villets a aquest preu o, en el plantejament que he fet, que s'han introduit 3 preus erronis.
+
+## PCA
+
+Per acabar amb aquesta neteja i aprofitant que tots els atributs són numèrics, faig un PCA (Principal Component anàlisis) per fer una transformació lineal del dataset i veure millor la forma d'aquestes dades en obtenir la variabilitat explicada per cada una de les noves varaibles generades les quals no tenen correlacio lineal entre sí:
+```{r}
+# Mostro un resum de la variança explicada pels difernets atributs del dataset amb els valors escalats.
+summary(prcomp(dataset, center = TRUE, scale. = TRUE))
+
+
+# Referències:
+# https://bookdown.org/rdpeng/exdata/dimension-reduction.html
+# https://www.datacamp.com/community/tutorials/pca-analysis-r
+```
+Així, el PCA ens ha generat 8 components principals on, amb els 6 primers, ja tenim explicada el 91.36% de la variança de les dades. Es podria treballar amb aquest subconjunt però com tampoc tenim cap problema d'emmagatzematge o de potència de processat que ens obligui a reduir la dimensionalitat del dataset, treballaré amb el dataset original. A més a més, deixant de banda la variança explicada superior al 20% dels dos primers components, tots expliquen una variança singificativa del dataset; inclús l'últim component n'explica un 3.5%.
+
+
+## Nou atribut
+
+Com he dit, només amb els components actuals no crec que pugui generar un model predictiu millor que els que hi ha, de fet, la cosa està molt complicada. Per tant, he decidit generar un nou atribut amb els ja existents. Aquest sirà una estimació de les probabilitats que té de sobreviure usant la lògica. En un accident d'aquest tipus el que crec que pasaria a l'hora de tenir elegibilitat per pujar a un bot i salvar-se seria: nens i menors d'edat > dones d'entre 18-39 > homes d'entre 18-39  > dones de més de 39 anys > homes de més de 39 anys. I dins, de cada grup, primer clarament anirien els que pertanyen a la primera clase, seguits dels de segona i, finalment, els de tercera clase.
+
+Per tant, crearé un atribut nomenat Priority que anirà d'1 a 15 sent 1 els nens de primera clase i 15 els homes de més de 39 anys de tercera clase:
+```{r}
+# Defineixo l'atribut Priority
+dataset['Priority'] <- NA
+
+# Per cada fila/pasatger del dataset
+for (i in 1:nrow(dataset)) {
+  # Si és un menor:
+  if (dataset[i, 'Age'] < 18.0) {
+    # Li asigno directament el valor de la seva clase
+    dataset[i, 'Priority'] <- dataset[i, 'Pclass']
+  # Si té menys de 40 anys
+  } else if (dataset[i, 'Age'] < 40.0) {
+    # Si és una dona li asigno el valor 3 + el valor de la seva clase
+    if (dataset[i, 'Sex'] == 0) {
+      dataset[i, 'Priority'] <- 3 + dataset[i, 'Pclass']
+    # Si és un home li asigno el valor 6 + el valor de la seva clase
+    } else {
+      dataset[i, 'Priority'] <- 6 + dataset[i, 'Pclass']
+    }
+  # Finalment, si té 40 o més anys
+  } else {
+    # Si és una dona li asigno el valor 9 + el valor de la seva clase
+    if (dataset[i, 'Sex'] == 0) {
+      dataset[i, 'Priority'] <- 9 + dataset[i, 'Pclass']
+    # Si és un home li asigno el valor 12 + el valor de la seva clase
+    } else {
+      dataset[i, 'Priority'] <- 12 + dataset[i, 'Pclass']
+    }
+  }
+}
+
+
+# Referències:
+# https://www.marsja.se/how-to-add-an-empty-column-to-dataframe-in-r-with-tibble/
+# https://stackoverflow.com/questions/1699046/for-each-row-in-an-r-dataframe/1699296
+# https://stackoverflow.com/questions/14924935/using-r-convert-data-frame-to-simple-vector
+# https://www.geeksforgeeks.org/how-to-change-row-values-based-on-a-column-value-in-r-dataframe/
+```
+
+Un cop creat i afegit aquest nou atribut, en miro un resum estadistic per comprovar que tot estigui bé i torno a fer un PCA a veure si l'explicació de la variança ha canviat:
+```{r}
+summary(dataset$Priority)
+colSums(is.na(dataset))
+summary(prcomp(dataset, center = TRUE, scale. = TRUE))
+```
+Finalment, s'observa com a simple vista pareix que s'ha generat correctament; no té valors nuls i la seva distribució de valors pareix correcta. Pel que fa al PCA, hi ha petits canvis en la variança explicada per cada un dels components anteriors  degut a que ara n'hi ha un de nou on, aquest últim, explica un 1.1% de la variança del dataset; no és molt però, al meu parer, és una millora singificativa.
+
+*****
+# Anàlisis de les dades
+*****
+
+Un cop ja tinc les dades tal i com vull procedeixo a fer-ne diferents tipus d'anàlisis
+
+## Nombre de clústers
+
+Investigant els posibles anàlisis m'ha paregut interessant descobrir el nombre de clústers/grups en que la llibreria cluster divideix el datset per a, d'aquesta manera, tenir una idea dels diferents tipus de pasatgers que havia al Titanic:
+```{r message= FALSE, warning=FALSE}
+# Instalo la llibreria cluster si no està instalada i la crido
+if (!require('cluster')) install.packages("cluster"); library('cluster')
+
+# Calculo la matriu de dissimilitud amb la formula generalitzada de Gower
+d <- daisy(dataset, metric = "gower")
+
+# Defineixo la llista on agregaré l'estimació de la qualitat de cada un dels clústers que provaré (10 en total) i la llista on faré aquesta mateixa estimació usant la suma dels quadrats de les distàncies dels punts respecte el seu centre
+llista_resultats          <- rep(0, 10)
+llista_resultats_quadrats <- rep(0, 10)
+
+# Per cada valor en la llista [2,3,4,5,6,7,8,9,10], aplico l'algoritme kmeans al dataset definit amb el valor com a número de clusters i ho guardo a la variable fit. A continaució, li extrec el component cluster i el guardo a la variable y_cluster per tenir així una llista amb el cluster al que pertany cada registre (pasatger del Titanic). Després, obtinc la qualitat del procés d'agregació aplicant la funcionalitat silhouette a la llista y_cluster i usant la matriu de dissimilitud com a objecte dissimilar (dist) on, el resultat obtingut, el guardo a la variable sk. Seguidament, calculo la mitjana de la tercera columna de sk, la qual correspon a la qualitat de l'agrupament, per saber així la qualitat del cluster. Un cop obtingudes totes aquestes dades, creo un títol per al clusterplot que generaré amb la informació sobre el número de clusters i la seva qualitat. Finalment, genero el clusterplot per visualitzar els clusters amb el paràmetre label=1 per a només veure les separacions sense l'identificador de cada punt, guardo la qualitat del cluster a la llista_resultats i el parametre tot.withinss de la variable fit a la llista_resultats_quadrats.
+for (i in c(2,3,4,5,6,7,8,9,10))
+{
+  fit                           <- kmeans(dataset, i)
+  y_cluster                     <- fit$cluster
+  sk                            <- silhouette(y_cluster, d)
+  cluster_quality               <- mean(sk[,3])
+  title                         <- paste(toString(i), "clusters quality:", toString(cluster_quality), sep=" ")
+  clusplot(dataset, y_cluster, color=TRUE, shade=TRUE, labels=1, lines=0, main=title)
+  llista_resultats[i]           <- cluster_quality
+  llista_resultats_quadrats[i]  <- fit$tot.withinss
+}
+
+# Mostro per pantalla el plot mostrant els valors de llista_resultats i el plot mostrant els valors de llista_resultats_quadrats:
+plot(2:10,llista_resultats[2:10],type="o",pch=19,col="blue",xlab="Clusters",ylab="Siluete", title="Cluster aproximation")
+plot(2:10,llista_resultats_quadrats[2:10],type="o",pch=15,col="blue",xlab="Clusters",ylab="Withinss", title="Cluster aproximation")
+
+
+# Referències:
+# https://www.rdocumentation.org/packages/cluster/versions/2.1.0/topics/daisy
+# https://www.rdocumentation.org/packages/cluster/versions/2.1.1/topics/clusplot.default
+# https://stackoverflow.com/questions/7201341/how-can-two-strings-be-concatenated
+```
+En mirar les siluetes mitjanes de cada cluster es veu que el millor és 2 seguit de 3 i 5 clústers però en avaluar el millor nombre de clústers amb el mètode withinss, considera el millor model aquell que ofereix la menor suma dels quadrats de les distàncies dels punts de cada grup respecte al seu centre, pareix que la corba que mostra el gràfic s'estabilitza sobre 5 clùsters. D'aquesta manera, concloc que amb aquestes dades es diferèncien 5 tipus diferents de pasatgers al Titanic encara que també seria vàlid diferenciar-ne 2 tipus. En cas que acceptem com a vàlid els 5 grups, basant-me totalment amb el meu raonament, diria que potser són similars als 5 grups que he definit a l'hora de generar el nou atribut Priority, seria el que més sentit li veig i, a més a més, em va molt bé ja que coincideix amb el raonament que he plantejat en l'apartat anterior dontant-li més veracitat a l'atribut Priority. En canvi, també li veig sentit acceptar com a vàlid que hi ha 2 tipus diferents de pasatges ja que podria ser que siguin els que van sobreviure i els que no.
+
+
+## Comprovació de la normalitat i homogeneitat de la variança
+
+Avans de continuar en l'anàlisis i extracció de conclusions procedeixo a comprovar la distribució d'aquest dataset per veure si les dades segueixen una distirbució normal.
+Per fer-ho utilitzaré la proba de normalitat d'Anderson-Darling on, només acceptaré que els diferents atributs tenen una distribució normal si el p-valor obtingut per la prova és superior a 0.05:
+```{r message= FALSE, warning=FALSE}
+# Instalo la llibreria nortest si no està instalada i la crido
+if (!require('nortest')) install.packages("nortest"); library('nortest')
+
+# Per cada atribut del dataset (tots són numèrics)
+for (i in 1:ncol(dataset)) {
+  # Si el p-valor és superior a 0.05, és a dir, si segueix una distribució normal, en mostro el nom
+  if (ad.test(dataset[,i])$p.value > 0.05) {
+    cat(colnames(dataset)[i])
+    cat('\n')
+  }
+}
+```
+
+En aquest cas, com totes els atributs han obtingut un p-valor inferior a 0.05 és rebutja la hipòtesis nula de distribució normal i s'accepta que cap atribut del dataset segueix una distribució normal.
+
+Un cop comprovada la normalitat i, encara que ja hem mirat la variança explicada dels diferents atributs en fer el PCA, paso a estudiar la homogeneitat de les variançes mitjançant el test de Flinger-Killen. En aquest cas, estuidiare l'homogeneitat en quan a tots els atributs frent a la supervivència ja que és aquest el que m'interesa en l'estudi.
+```{r message= FALSE, warning=FALSE}
+# Per cada columna del dataset menys la primera (correspon a l'atribut supervivència)
+for (i in 2:ncol(dataset)) {
+  # Si el p-valor és superior a 0.05, és a dir, si les variançes són homogènies, en mostro el nom i el p-valor
+  if (fligner.test(dataset[,1], dataset[,i])$p.value > 0.05) {
+    cat(colnames(dataset)[i], ' (', fligner.test(dataset[,1], dataset[,i])$p.value, ')')
+    cat('\n')
+  }
+}
+
+# Referències:
+# https://rdrr.io/r/stats/fligner.test.html
+```
+Ara si que s'han trobat mostres amb varainçes homogenies. Els atributs Age i Survived tenen un p-valor altissim (quasi d'1) indicant així que les seves variançes són molt homogenies i, per tant, indicant que l'edat i la supervivència estaven fortament correlacionats. Pel que fa a l'atribut Fare també té una variança homogènia a la de l'atribut Survived indicant així que el que va pagar el pasatger per pujar al Titanic està correlacionat amb les seves probabilitats de sobreivure. Són uns resultats molt lògics ja que és normal que s'intentés salvar primer als més joves i no deixem d'estar en un món capitalista així que els que tenen diners sempre tenen més ventatjes que els altres.
+
+## Diagrames de freqüència, taules i gràfiques
+
+Continuo amb un anàlisis visual de les dades en forma de gràfics de barres; primerament discretitzaré la variable edat en 3 segments i, després, generaré gràfics de barres per veure la distribució de les variables Survival, Pclass, Age (segmentada) i Priority:
+```{r message= FALSE, warning=FALSE}
+# Instalo la llibreria ggplot2, grid i gridExtra si no ho estan i les crido
+if (!require('ggplot2')) install.packages("ggplot2"); library('ggplot2')
+if (!require('grid')) install.packages("grid"); library('grid')
+if (!require('gridExtra')) install.packages("gridExtra"); library('gridExtra')
+
+# Discretitzo la vairable edat per poder-ne fer un gràfic de freqüències
+dataset["segment_age"] <- cut(dataset$Age, breaks = c(0,19,40,120), labels = c("0-18", "19-39", "+40"))
+
+# Genero 4 gràfics de barres amb ggplot tot hi indicant els labels i la seva orientació
+survival_plot   <- ggplot(dataset,aes(Survived))    + geom_bar() + labs(x="Survived", y="Passenger") + ggtitle("Survival")            + theme(axis.text.x = element_text(angle = 45, vjust = 0.7))
+class_plot      <- ggplot(dataset,aes(Pclass))      + geom_bar() + labs(x="Class", y="Passenger")    + ggtitle("Passenger class")     + theme(axis.text.x = element_text(angle = 45, vjust = 0.5))
+age_plot        <- ggplot(dataset,aes(segment_age)) + geom_bar() + labs(x="Age", y="Passenger")      + ggtitle("Passengers ages")     + theme(axis.text.x = element_text(angle = 45, vjust = 0.6))
+priority_plot   <- ggplot(dataset,aes(Priority))    + geom_bar() + labs(x="Priority", y="Passenger") + ggtitle("Passengers priority") + theme(axis.text.x = element_text(angle = 45, vjust = 0.7))
+
+# Mostro els 4 gràfics en una grid de dos columnes
+grid.arrange(survival_plot,class_plot,age_plot,priority_plot,ncol=2)
+
+# Referències:
+# https://stackoverflow.com/questions/1330989/rotating-and-spacing-axis-labels-in-ggplot2
+# http://www.sthda.com/english/wiki/wiki.php?id_contents=7930
+```
+En aquets gràfics de barres tampoc s'obté molta informació nova però si que s'observa com:
+- La majoria de gent va morir.
+- Al voltant del 50% dels pasatgers eren de tercera classe i l'altre 50% es distribueix d'una manera equitativa entre pasatgers de primera i segona classe.
+- La gran majoria de pasatgers tenien entre 19 i 39 anys i havia quasi el mateix nombre de menors que de pasatgers de més de 40 anys.
+- La gran majoria de pasatgers tenien prioritat 9: homes d'entre 19 i 39 anys de tercera classe. També s'observa com en els majors de 40 anys la majoria d'homes i dones eren de primera clase.
+
+Un cop vistes aquestes freqüències, m'agradaria veure la relació que hi ha entre la supervivència i el sexe de la persona, la seva clase i la seva edat:
+```{r message= FALSE, warning=FALSE}
+# He d'usar atributs categorics així que faig les transformacions pertinents:
+dataset$Sex_categoric <- ifelse(dataset$Sex==1, 'Male', 'Female')
+dataset$Survived_categoric <- ifelse(dataset$Survived==1, 'yes', 'no')
+dataset$pclass_categoric <- as.character(dataset$Pclass)
+
+# Mostro la supervivència dels pasaters en funció del seu sexe
+ggplot(data = dataset,aes(x=Sex_categoric,fill=Survived_categoric))+geom_bar()+ylab("Count")
+# Mostro la supervivència dels pasaters en funció del seu sexe i classe 
+ggplot(data = dataset,aes(x=Sex_categoric,fill=Survived_categoric))+geom_bar(position="fill")+facet_wrap(~pclass_categoric)+ylab("Frequency")
+# Mostro la supervivència dels pasaters en funció del de la seva edat
+ggplot(data = dataset,aes(x=segment_age,fill=Survived_categoric))+geom_bar()+ylab("Count")
+# Mostro la supervivència dels pasaters en funció del seu sexe i classe 
+ggplot(data = dataset,aes(x=segment_age,fill=Survived_categoric))+geom_bar(position="fill")+facet_wrap(~pclass_categoric)+ylab("Frequency")
+```
+En el primer gràfic s'observa com, dels supervivents, hi havia moltes més dones que homes encara que la tripulació estés formada per més del doble d'homes que de dones. I, fixant-nos amb el gràfic de freqüències absolutes del sexe, s'observa com aquesta tendència varia entre classes on, de primera classe van sobreviure quasi la totalitat de les dones i el 30% dels homes mentre que, de tercera classe, van sobrevirue la meitat de les dones i un 13% dels homes veient així les grans diferències que havia entre ser home o dona i pertanyer a una o altra clase social (la clase del tiquet reflecteix la clase social). Ara, fixant-me amb el gràfic de supervivència segons l'edat, no es veuen grans diferències pel que fa a la supervivència dels menors d'edat i dels majoris de 40, potser es deu a que els majors de 40 anys solien pertanyer a la primera clase social. Finalment, mirant el gràfic de freqüències absolutes de l'edat segmentada, és més clara que mai aquesta diferència entre edat i clases socials; s'observa una gran caiguda en el percentatge de supervivents conforme canviem d'edat i clase social on, independentment de la teva edat, si pertanyies a la tercera clase social les teves probabilitats de sobrevirue eren menors que les de la resta de pasatgers.
+
+Un cop estudiades aquestes freqüències, procedeixo a analitzar estadisticament la correlació entre els diferents atributs del dataset. Aquesta corrlelació l'estudiaré amb el coeficient de correlació d'Spaerman ja que cap dels atributs segueix una distribució normal.
+```{r message= FALSE, warning=FALSE}
+# Defineixo la matriu de correlació com una matriu de dos columnes i, després, li asigno nom a aquestes columnes
+corr_matrix           <- matrix(nc = 2, nr = 0)
+colnames(corr_matrix) <- c("correlation", "p-value")
+
+# Per cada columna del dataset menys la primera (correspon a l'atribut supervivència) i les 4 últimes (són els atributs categorics generats per mi)
+for (i in 2:(ncol(dataset) - 4)) {
+  # Aplico el test de Spearman a l'atribut en qüestio en relació a l'atribut Survived
+  spearman_test =cor.test(dataset[,i],dataset[,1],method = "spearman")
+  # Genero una matriu d'una fila i dos columnes
+  pair = matrix(ncol = 2, nrow = 1)
+  # Extrac els coeficients de correlació i el p-valor del test de Sperman i els afegeixo a aquesta nova matriu on, la correlació l'afegeixo en valor absolut ja que no m'interesa si és positiva o negativa sinò la seva potència
+  pair[1][1] = abs(spearman_test$estimate)
+  pair[2][1] = spearman_test$p.value
+  # Afegeixo aquesta nova matriu a la matriu de correlació (serà una nova fila d'aquesta)
+  corr_matrix <-rbind(corr_matrix, pair)
+  # Indico que l'index d'aquesta nova fila sigui el nom de la columna sobre la que s'ha estudiat la correlació
+  rownames(corr_matrix)[nrow(corr_matrix)] <-colnames(dataset)[i]
+}
+
+# Mostro la matriu de correlació ordenada de més a menys correlació
+corr_matrix[order(corr_matrix[,1], decreasing=TRUE),]
+
+
+# Referències:
+# https://www.tutorialspoint.com/how-to-sort-a-matrix-based-on-one-column-in-r
+```
+Observant aquesta matriu, la correlació més forta i amb un p-valor més petit (gran pes estadistic de la correlació mostrada) és el sexe indicant així que el que més importava era el teu sexe. Després va la variable Pclass seguida de Priority i Fare indicant així que, després del teu sexe, lo que més importava era la teva calse social. Aquests són uns resultats alarmants ja que l'edat que tinguesis ocupa l'últim lloc pel que fa a correlació i el seu p-valor és superior a 0.05 indicant així que no havia correlació entre l'edat i les probabilitats de sobreviure quan, al meu parer, en un món just l'edat tindria que ocupar el primer lloc d'aquesta llista seguida del sexe i no és ni de lluny els resultats que estic obtenint.
+
+Amb aquests resultats també concloc que la homogeneitat de les variançes obtingudes mitjançant el test de Flinger-Killen no tenen molta veracitat ja que ha indicat una variança homogènia entre Age i Survived però aqui s'obtenen resultats contradictoris i, com aquí si que tenim un p-valor per saber-ne la qualitat de l'estadisitic, decideixo fiar-me d'aquests valors.
+
+He trobat un altre tipus de matriu de correlació que comprova la correlació entre totes les variables i, encara que no és el que es busqui, és més bonica de veure i potser es pot extreure alguna conclusió interessant:
+```{r message= FALSE, warning=FALSE}
+# Instalo la llibreria reshape2 si no ho està i la crido
+if (!require('reshape2')) install.packages("reshape2"); library('reshape2')
+
+# Genero la matriu de corrleacions amb els atributs numèrics
+correlation_matrix <- round(cor(dataset[ , unlist(lapply(dataset, is.numeric)) ]),2)
+# Derriteixo la matriu amb la funcionalitat melt() de la llibreria reshape2
+melted_correlation_matrix <- melt(correlation_matrix)
+# Plotejo aquesta matriu generada mostrant linies blanques per separar les diferents correlacions i ajustant el text
+ggplot(data = melted_correlation_matrix, aes(x=Var1, y=Var2, fill=value)) + geom_tile(color = "white") + theme(axis.text.x = element_text(angle = 45, vjust = 0.8))
+
+
+# Referències:
+# http://www.sthda.com/english/wiki/ggplot2-quick-correlation-matrix-heatmap-r-software-and-data-visualization
+# https://stackoverflow.com/questions/5863097/selecting-only-numeric-columns-from-a-data-frame
+```
+Tampoc es poden extraure grans conclusions ja que les correlacions més fortes són obvies: Priority-Age, Fare-Survived, Sex-Survived, Fare-Pclass, Parch-SibSp. I, les altres correlacions menys fortes tampoc són d'interés, per tant, segueixo amb l'anàlisis.
+
+En aquests resultats sembla que el número de familiars que tenia el pasatger influia molt poc en les seves probabilitats de supervivència però influia, per tant, he decidit fer un pas enrere en aquest anàlisis i mostrar com variaven les probabiltiats de supervivència segons la mida de la familia que tenia el pasatger a bord:
+```{r message= FALSE, warning=FALSE}
+# Genero una nova columna amb el número de membres familairs de cada pasatger, li sumo 1 al contar-lo a ell també
+dataset$FamilySize <- dataset$SibSp + dataset$Parch + 1
+
+ggplot(data = dataset ,aes(x=FamilySize,fill=Survived_categoric))+geom_bar()+ylab("Count")
+ggplot(data = dataset ,aes(x=FamilySize,fill=Survived_categoric))+geom_bar(position="fill")+ylab("Frequency")
+```
+D'aquesta manera, s'observa com la gran majoria de gent viatjava sola fent que tampoc hi hagui moltes dades per a nombres de familia grans i, per tant, fent que no ens puguem fiar molt dels resultats obtinguts pel gràfic de freqüències absolutes. Encara així, pareix que les families de 2-4 membres tenien la major probabilitat de sobreviure.
+
+Ara, generaré taules de contingència per veure amb números els resultats extrets de manera visual ja que sempre és millor tenir els resultats respaldats per valors extrets d'aplicar formules estadístiques. D'aquesta manera, generaré taules de contingència per als atributs pclass_categoric, segment_age i Sex_categoric en relació a la seva supervivència:
+```{r message= FALSE, warning=FALSE}
+# Supervivència per classe. Aplico prop.table per mostrar-ho en percentatge
+table_Pclass <- table(dataset$pclass_categoric, dataset$Survived_categoric)
+cat('Survival by Class')
+prop.table(table_Pclass, margin = 1)
+
+# Supervivència per edat
+table_Age <- table(dataset$segment_age, dataset$Survived_categoric)
+cat('\nSurvival by Age')
+prop.table(table_Age, margin = 1)
+
+# Supervivència per sexe
+table_Sex <- table(dataset$Sex_categoric, dataset$Survived_categoric)
+cat('\nSurvival by Sex')
+prop.table(table_Sex, margin = 1)
+
+# Adicionalment també miro la supervivència per edat i classe:
+table_AgePclass <- table(dataset$Sex_categoric, dataset$Survived_categoric, dataset$pclass_categoric)
+cat('\nSurvival by Age and Class\n')
+table_AgePclass
+
+# Referències:
+# https://www.datacamp.com/community/tutorials/contingency-tables-r
+```
+Avans d'analitzar aquestes taules, els hi aplico tests estadistics per veure la seva fiabilitat, és a dir, comprovo el grau de significança d'aquestes taules de contingència, per veure si els percentatges mostrats són singificatius, mitjançant el coeficient de Cramer-von Mises i el de contingència de Person (https://cran.r-project.org/web/packages/DescTools/DescTools.pdf):
+```{r message= FALSE, warning=FALSE}
+# Instalo la llibreria DescTools si no ho està i la crido
+if (!require('DescTools')) install.packages("DescTools"); library('DescTools')
+
+# Test de Cramer-von Mises
+CramerV(table_Pclass, correct=TRUE)
+CramerV(table_Age, correct=TRUE)
+CramerV(table_Sex, correct=TRUE)
+
+# Contingència de Person
+ContCoef(table_Pclass, correct=TRUE)
+ContCoef(table_Age, correct=TRUE)
+ContCoef(table_Sex, correct=TRUE)
+
+
+# Referències:
+# https://www.rdocumentation.org/packages/rcompanion/versions/2.3.25/topics/cramerV
+# https://www.rdocumentation.org/packages/misty/versions/0.3.2/topics/cont.coef
+```
+El coeficient de Cramer-von Mises corretgit és superior a 0.3 per la taula de classe i de sexe però no per a la d'edat indicant així que ens podem fiar dels estadístics mostrats de table_Pclass i table_Sex però no de table_Age; és un resultat lògic ja que en probes anteriors s'ha msotrat com Age i Survival no estàn correlacionats. Pel que fa al coeficient de contingència de Person, obtenim resultats similars; ens podem fiar dels els estadístics mostrats de table_Pclass i table_Sex (coeficient superior a 0.3) però no de table_Age.
+
+Un cop estudiada la validesa d'aquestes taules, procedeixo a analitzar-les:
+- Les probailitats de supervivència per clase són: 62.4% per a la primera clase, 47.3% per a la segona i 24.2% per a la tercera. Per tant, corroborem la gran importància de la clase a la que pertanyia el pasatger.
+- Encara no podent fiar-me de la taula Edat-Supervivència, s'observa com els que tenien menys probabilitats de supervivència eren els que tenien entre 19 i 39 anys. Són unes dades poc intuitives ja que en principi com més gran menys probabilitats tens de sobreviure per això, com ja he trobat aquests resultats varies vegades, vaig a corroborar la clase a la que pertanyien les tres franjes d'edat definides:
+```{r message= FALSE, warning=FALSE}
+# Mostro la clase dels pasatgers en funció del de la seva edat
+ggplot(data = dataset,aes(x=segment_age,fill=pclass_categoric))+geom_bar()+ylab("Count")
+```
+Per tant, aquesta menor supervivència dels pasatgers d'entre 19 i 39 anys es deu a que aproxiamdament la meitat de pasatges de més de 40 anys pertanyien a la primera classe i, per tant, tenien més probabiltiats de supervivència encara sent més vells.
+
+Continuant amb l'extracció de conclusions de les taules:
+- Les probabiltiats de supervivència per ser dona eren del 74.12% i per ser home 18.6%; és una diferència avismal però s'enten per lo de "dones i nens primer".
+- Pel que fa a les probabilitats de supervivència per sexe i classe s'observa que de primera clase només van morir 3 de les 93 dones, de segona clase 6 de 76 i en la tercera clase només la meitat van sobreviure. Ara, fixant-me amb els homes pasa una cosa similar, el rati de supervivència es redueix avismalment amb el canvi de clase. Un altre cop més s'observa aquesta gran influència de la clase i el sexe en la supervivència.
+
+Un cop extretes tantes conclusions, aplicats tants estadistics i observats tants gràfics diferents, dono per acabat l'apartat d'anàlisis tot hi eliminant els atributs categòrics generats:
+```{r message= FALSE, warning=FALSE}
+# Elimino els atributs categorics generats
+dataset <- dataset[ , !(names(dataset) %in% c('segment_age', 'Survived_categoric', 'Sex_categoric', 'pclass_categoric', 'FamilySize'))]
+```
+
+*****
+# Generació i aplicació de models
+*****
+
+Un cop netejades i analitzades les dades procedeixo a generar i aplicar models sobre aquestes per poder extraure conclusions més precises i participar en la competició.
+
+## Arbre de decisió
+
+Genero el model d'arbre de decisió per veure les regles que troba per determinar si una persona sobreviurà o no. Aquesta generació de regles la faig per poder extreure regles/conclusions més concretes sobre la influència dels diferents atributs en la supervivència dels pasatgers.
+
+D'aquesta manera, començo per separar les dades en la columna que usaré per classificar (Survived) i les columnes que usaré per determinar-ne el valor (totes les altres). També aprofito per separar aquestes noves dades generades en el conjunt d'entrenament i de prova:
+```{r message= FALSE, warning=FALSE}
+# Defineixo una llavor per a que el codi sigui reproduible:
+set.seed(12)
+
+# Defineixo un dataset amb la columna que usaré per classificar (Survived) i un dataset amb les altres columnes (other_columns)
+classify_column <- dataset$Survived
+other_columns   <- dataset[ , !(names(dataset) %in% c("Survived"))]
+
+# Obtinc els indexs de 2/3 de les files del dataset
+indexes = sample(1:nrow(dataset), size=floor(((3-1)/3)*nrow(dataset)))
+
+# Uso aquests index per seleccionar els valors dels datasets generats que usaré per entrenar el model
+train_classify  <- classify_column[indexes]
+train_columns   <- other_columns[indexes,]
+
+# Ara, utilitzo els index que no estan aqui inclosos (altre terç de les dades) per definir el conjunt de prova
+test_classify  <- classify_column[-indexes]
+test_columns   <- other_columns[-indexes,]
+
+
+# Referència:
+# http://rfunction.com/archives/62
+# https://r-coder.com/set-seed-r/
+# https://cran.r-project.org/web/packages/C50/vignettes/C5.0.html
+```
+
+Un cop generats els conjunts de dades, cargo el model d'arbre de decisió a usar. En aquest cas usaré el c5.0 ja que se li pot demanar que et generi regles i té molt bones reviews:
+```{r message= FALSE, warning=FALSE}
+# Instalo la llibreria C50 si no ho està i la crido
+if (!require('C50')) install.packages("C50"); library('C50')
+
+# Defineixo una nova llavor per a que el codi sigui reproduible:
+set.seed(121)
+
+# El model C5.0 necesita que les columnes a usar per classificar siguin de tipus factor
+train_classify = as.factor(train_classify)
+
+# Defineixo el model d'arbre de decisió amb regles i com a arbre:
+model_as_rules <- C5.0(train_columns, train_classify, rules=TRUE)
+model_as_tree <- C5.0(train_columns, train_classify)
+
+
+# Referència:
+# https://cran.r-project.org/web/packages/C50/vignettes/C5.0.html
+# https://topepo.github.io/C5.0/reference/C5.0.html
+# https://www.rdocumentation.org/packages/C50/versions/0.1.3.1/topics/predict.C5.0
+```
+
+Un cop generat el model d'arbre de decisió en mostro les regles amb la seva fiabilitat i la forma d'aquest arbre:
+```{r}
+# Mostro les regles generades
+summary(model_as_rules)
+# Mostro la forma de l'arbre de decisió
+plot(model_as_tree)
+
+
+# Referències:
+# https://topepo.github.io/C5.0/reference/plot.C5.0.html
+```
+Tal i com s'observa de l'arbre de decisió plotejat poca informació se'n pot extraure al verue's molt malament però es podrien anar mirant els diferents nodes si es vulgues; en aquets cas no ho faré perquè ja tinc les 13 regles que s'han generat per extraure conclusion on, amb aquestes regles, l'arbre de decisió només a fallat en un 13.5% dels casos; ha classificat 350 dels 363 pasatgers que van morir correctament i 162 dels 229 pasatgers que van sobreviure. D'aquesta manera, en observar les 10 regles amb major seguretat es pot concloure que:
+1. Les dones de tercera clase que van pagar un villet de més de 22$ van morir amb una seguretat del 86.7%.
+2. Els homes de segona i tercera clase van morir amb una seguretat del 86.1%.
+3. Els homes amb una prioritat superior a la 4, és a dir majors d'edat, van morir amb una seguretat del 83.1%.
+4. Les dones de segona i primera clase van sobreviure amb una seguretat del 96.5%.
+5. Les dones que van embarcar a Cherbourg o Queenstown i van pagar més de 16.7$ pel villet van sobreviure amb una seguretat del 95%.
+6. Els pasatgers menors d'edat pertanyens a primera o segona clase van sobreviure amb una seguretat del 92.3%.
+7. Els pasatgers de priemra clase que van pagar més de 15$ pel villet i tenien entre 24.5 i 27.5 anys van sobreviure amb una seguretat del 90%.
+8. Els pasatges menors de 36 anys que van pagar entre 15.55 i 27$ van sobreviure amb una seguretat del 88.9%.
+9. Les dones de prioritat 4 o menys, és a dir, less menors d'edat, van sobreviure amb una seguretat del 85.9%.
+10. Les dones que van embarcar a Cherbourg o Queenstown i viatjaven sense pares ni fills van sobreviure amb una seguretat del 85.2%.
+
+Totes aquestes regles confirmen i milloren les conclusions que he anat hipotetitzant al llarg de la pràctica en indicar-nos les regles a seguir per saber si una persona va sobreviure o no. També ens indica el percentatge d'ús de cada atribut per saber si algú sobrevivia on, de més a menys percentatge d'ús van: Sex > Pclass > Priority > Embarked > Parch > Fare > Age. Resultat que concorda a la perfecció amb els altres estudis estadístics. Aquí també s'ha demostrat que l'atribut que he generat serveix d'algo ja que està inclos en les regles i té un elevat percentatge d'ús en el model, per tant, ja tinc més confiança en el seu ús per generar el model predictiu.
+
+
+## Qualitat del model
+
+un cop generat el model d'arbre de decisió en comprovo la seva qualitat amb el conjunt de dades que he separat avans:
+```{r}
+# Instalo la llibreria gmodels si no ho està i la crido
+if (!require('gmodels')) install.packages("gmodels"); library('gmodels')
+
+# Genero la predicció
+predict <- predict(model_as_tree,test_columns)
+
+# Mostro una matriu de confusió amb els valors de la predicció
+CrossTable(test_classify, predict,prop.chisq  = FALSE, prop.c = FALSE, prop.r =FALSE,dnn = c('Reality', 'Prediction'))
+
+
+# Referències:
+# https://www.kaggle.com/shravan3273/credit-approval-model-using-decision-tree
+# https://www.rdocumentation.org/packages/gmodels/versions/2.18.1/topics/CrossTable
+```
+Tal i com s'observa el model funciona bastant bé, ha predit correctament 238 dels 296 valors; s'obseva com sobretot es bo predint la gent que morirà en només fallar 14 dels 186 registres mentre que predint la gent que va sobreviure n'ha encertat 66 de 110. D'aqeusta manera crec que he generat un bon model predictiu i, per tant, el dono per vàlid.
+
+
+## Aplicació del model
+
+Finalment, per entrar en la competició, aplicaré un model com l'anterior a les dades de test. En aquest cas, encara no sent una bona pràctica, com per generar un model com més dades es tinguin millor, tornaré a crear el model d'arbre de decisió anterior però, aquest cop, usaré totes les dades; el problema es que no li podré calcular la qualitat però ja ho farà qui ho tingui que fer en la competició:
+```{r message= FALSE, warning=FALSE}
+# Defineixo una nova llavor per a que el codi sigui reproduible:
+set.seed(1212)
+
+# Converteixo la columna per classificar en tipus factor
+classify_column <- as.factor(classify_column)
+
+# Defineixo el model d'arbre de decisió:
+final_model <- C5.0(other_columns, classify_column)
+```
+
+Un cop tinc el model definitiu generat, preparo el dataset amb els pasatgers dels quals s'ha de predir si van sobreviure per poder aplicar-los el model:
+```{r message= FALSE, warning=FALSE}
+# Cargo el dataset de testeig que entregaré
+dataset_test <- read.csv("./test.csv",header=T,sep=",")
+
+# Extrec la columna indicant l'ID del pasatger per a l'entrega de resultats
+passenger_id <- dataset_test$PassengerId
+
+# Elimino les columnes sobrants
+dataset_test <- dataset_test[ , !(names(dataset_test) %in% c('Ticket', 'Cabin', 'Name', 'Pas', 'PassengerId'))]
+
+# Converteixo l'atribut Sex en numèric
+dataset_test$Sex <- ifelse(dataset_test$Sex=="male", 1, 0)
+
+# Converteixo la columna Embarked en factorial, em retornava els valors factorials com a string i he tingut que fer aquestes conversions per obtenir-lo com a numèric
+dataset_test$Embarked <- as.factor(as.numeric(as.factor(dataset_test$Embarked)))
+
+# En mostro un resum estadistic i en comprovo la completesa
+summary(dataset_test)
+colSums(is.na(dataset_test))
+colSums(dataset_test=="")
+```
+Com s'observa tot té bona pinta però he d'interpolar els valors faltants d'Age i Fare. També he d'afegir l'atribut Priority que he definit:
+```{r message= FALSE, warning=FALSE}
+# Interpolo els valors de l'atribut Age i Fare i els guardo a la mateixa columna del dataset
+dataset_test$Age <- na.approx(dataset_test$Age, rule = 2, maxgap = 4, na.rm = FALSE)
+dataset_test$Fare <- na.approx(dataset_test$Fare)
+
+# Defineixo i genero l'atribut Priority
+dataset_test['Priority'] <- NA
+for (i in 1:nrow(dataset_test)) {
+  if (dataset_test[i, 'Age'] < 18.0) {
+    dataset_test[i, 'Priority'] <- dataset_test[i, 'Pclass']
+  } else if (dataset_test[i, 'Age'] < 40.0) {
+    if (dataset_test[i, 'Sex'] == 0) {
+      dataset_test[i, 'Priority'] <- 3 + dataset_test[i, 'Pclass']
+    } else {
+      dataset_test[i, 'Priority'] <- 6 + dataset_test[i, 'Pclass']
+    }
+  } else {
+    if (dataset_test[i, 'Sex'] == 0) {
+      dataset_test[i, 'Priority'] <- 9 + dataset_test[i, 'Pclass']
+    } else {
+      dataset_test[i, 'Priority'] <- 12 + dataset_test[i, 'Pclass']
+    }
+  }
+}
+
+
+# Referències:
+# https://stackoverflow.com/questions/55138987/error-replacement-has-1810947-rows-and-data-has-1810956-same-each-time-for-pu
+```
+
+Un cop ja tinc el dataset de test tal i com volia en predic el valor de supervivència amb el model generat:
+```{r}
+# Genero la predicció final
+final_predict <- predict(final_model,dataset_test)
+final_predict
+```
+Aquí es poden observar els valors predits per als difernets pasatgers del dataset de test i, per tant, dono per acabat aquest apartat.
+
+*****
+# Resolució del problema i conclusions
+*****
+
+Per acabar amb la pràctica resoldre el problema plantejat, és a dir, participaré en la competició i, finalment, faré un resum de les conclusions més rellevants que he anat extraient a mesura que he realitzat la pràctica.
+
+## Participació en la competició
+
+Per entregar la meva proposta a la competició he de generar un CSV amb la forma que s'indica en les especificacions de la competició (https://www.kaggle.com/c/titanic/data?select=gender_submission.csv):
+```{r}
+# Genero un dataset amb les dues columnes que ha de contenir
+final_dataset <- data.frame(passenger_id, final_predict)
+colnames(final_dataset)<- c("PassengerId","Survived")
+
+# Genero el CSV amb el resultat final
+write.csv(final_dataset, '.\\gender_submission.csv', row.names = FALSE)
+
+
+# Referències:
+# https://stackoverflow.com/questions/6081439/changing-column-names-of-a-data-frame
+# https://datatofish.com/export-dataframe-to-csv-in-r/
+```
+
+Un cop entregada, he obtingut un Score de 0.7799 que correspon a la posició 10109. No està tant malament tenint en compte que hi ha un total de 40679 participacions; el meu model està dins els 25% millors i, per tant, em dono per satisfet. Afegeixo la imatge score.PNG al repositori de GitHub per a que en quedi constància.
+
+## Conclusions
+
+Els objectius d'aquesta pràctica ja estan complerts en haber pogut obtenir bones conclusions, un bon mnodel predicitiu i un resultat bó per participar en la competició del Titanic. Pel que fa a les conclusions extretes d'aquesta pràctica ja les he anat exposant però en faig un resum de les que considero més importants:
+1) Pareix que hi ha 5 clústers diferents, podria ser qeu fosin similars als 5 grups definits per generar l'atribut Priority.
+2) Gran caiguda de la supervivència conforme augmenta l'edat i la classe social on, independentment de l'edat, si el pasatger pertanyia a la tercera clase social les seves probabilitats de sobrevirue eren menors que les de la resta de pasatgers.
+3) En el pes sobre la supervivència, els atributs que més importaven eren: Sex > Pclass > Priority > Embarked > Parch > Fare > Age. Són uns resultats molt alarmants ja que l'edat del pasatger ocupa l'últim lloc pel que fa a correlació amb l'atribut Survived on el p-valor d'aquesta correlació és superior a 0.05, indicant així que no havia correlació entre l'edat i les probabilitats de sobreviure mentre que, la clase, ocupa el segon lloc a la llista d'atributs determinants de la supervivència del pasatger.
+4) S'observa una menor supervivència dels pasatgers d'entre 19 i 39 anys; es deu a que aproxiamdament la meitat de pasatges de més de 40 anys pertanyien a la primera clase i, per tant, tenien més probabiltiats de supervivència encara sent més vells.
+5) S'han obtingut 13 regles a seguir a l'hora de determinar si un pasatger anava o no a sobreviure, es poden utilitzar per veure manualment si un pasatger amb unes caracteristiques concretes anava a sobreviure o no segons el model d'arbre de decisió generat. I, els resultats obtinguts seguint aquest model són de fiar ja que només ha classificat malament un 13.5% del total de les dades del conjutn d'entrenament seguint aquestes regles.
+
+*****
+# Exportació del codi i resultats
+*****
+
+En el següent enllaç de GitHub (https://github.com/Andreufb/TitanicSurvivalPrediction.git) es troba el projecte que conté:
+- Codi en R utlitzat amb extenció rmd.
+- Fitxer HTML amb la pràctica realitzada per a una millor visualització d'e la pràctica d'aquesta.
+- Imatge de la participació a la competició.
+- Fitxers CSV usats per la realització de la pràctica.
+- Fitxer CSV amb el resultat usat per participar en la competició.
+
+
+
+
