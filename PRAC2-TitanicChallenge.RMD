@@ -27,6 +27,8 @@ En llegir l'enunciat i navegar per Kaggle he trobat una gran multitud de dataset
 1) Sempre m'han agradat les competicions informàtiques, per mi la competició és de les millors maneres d'aprendre i, en aquest cas, hi ha un repte actiu fent que després de dos anys sense anar a cap Hackaton em resulti atractiu entrar en alguna mena de competició on pugui aportar la meva manera de programar i enfrentar problemes.
 2) L'accident del Titanic és molt controversial pel que fa a la gent que va sobreviure, per alguna cosa hi ha aquest repte de trobar el millor algoritme de predicció de la supervivència tenint en compte els atributs associats als pasatgers. D'aquesta manera, m'agradaria entendre millor de que depenia la supervivència de la gent que va embarcar ja que pareix que el seu destí estava determinat avans d'embarcar.
 
+A l'hora de resoldre la pràctica poso entre parèntesis al costat de cada apartat el número al que correspon de l'enunciat de la pràctica per a una correcció més fàcil
+
 *****
 # Objectius
 *****
@@ -34,7 +36,7 @@ En llegir l'enunciat i navegar per Kaggle he trobat una gran multitud de dataset
 Els objectius de la realització d'aquesta pràctica amb el dataset seleccionat són la descripció del dataset per entendren els atributs i forma d'aquest a la perfecció seguit de la seva correcta integració. A continuació, faré una neteja de les dades per tenir-les amb el format correcte per a poder-les analitzar, graficar i usar per generar un arbre de decisió com a model predictiu ja que, a part de donar bons resultats, n'hi ha que també mostren les regles usades i, aquestes, seràn de gran utilitat a l'hora d'extraure conclusions a l'hora de determinar si una persona sobreviurà o no. A tot això, també m'agradaria generar algún atribut nou ja que amb el dataset tal i com està no crec que pugui generar un model predictiu millor del que ja han generat.
 
 *****
-# Descripció del dataset
+# Descripció del dataset (1 i 2)
 *****
 
 El dataset es divideix en dos; un per entrenar el model predictiu de mineria de dades i un per aplicar-li el model per entrar a la competició. D'aquesta manera, el conjunt de dades està format pel fitxer CSV amb les dades d'entrenament [train.csv](https://www.kaggle.com/c/titanic/data?select=train.csv) i el de test [test.csv](https://www.kaggle.com/c/titanic/data?select=test.csv).
@@ -108,7 +110,9 @@ Tal i com s'observa la columna Age conté 177 valors nuls, la columna Cabin 687 
 
 Un cop descrit i estudiat superficialment el dataset procedeixo a fer-ne una neteja d'atributs i valors
 
-## Completesa, adaptació i selecció de les dades
+*****
+## Completesa, adaptació i selecció de les dades a utilitzar (3.1 i 4.1)
+*****
 
 Primerament, com hi ha valors inexistents en algunes columnes, vaig a deixar el dataset complet fent les accions pertinents. D'aquesta manera he decidit:
 1) Atribut Age: Conté 177 valors nuls; com tampoc són tants els intentaré interpolar amb les altres dades del dataset per no perdre aquests registres.
@@ -175,8 +179,9 @@ dataset$Sex <- ifelse(dataset$Sex=="male", 1, 0)
 
 D'aquesta manera, ja tenim tots els atributs del dataset en format numèric i sense dades faltants.
 
-
-## Outliers
+*****
+## Outliers (3.2)
+*****
 
 Un cop tenim el dataset complet i amb els atributs que volem, n'estudio els posibles valors erronis/extrems que conté ja que podrien esviaixar molt els resultats del model. Per fer-ho, començo amb un estudi visual dels valors extrems mitjançant la creació de boxplots dels quatre atributs que crec podrien tenir-ne i en l'extracció dels indexs d'aquests valors per verue quants n'hi ha:
 ```{r}
@@ -242,7 +247,9 @@ dataset <- dataset[dataset$Fare != max(fare_outliers),]
 ```
 Tal i com s'observa s'han eliminat 3 entrades indicant així que es van vendre 3 villets a aquest preu o, en el plantejament que he fet, que s'han introduit 3 preus erronis.
 
-## PCA
+*****
+## PCA (4.3.1)
+*****
 
 Per acabar amb aquesta neteja i aprofitant que tots els atributs són numèrics, faig un PCA (Principal Component anàlisis) per fer una transformació lineal del dataset i veure millor la forma d'aquestes dades en obtenir la variabilitat explicada per cada una de les noves varaibles generades les quals no tenen correlacio lineal entre sí:
 ```{r}
@@ -256,8 +263,9 @@ summary(prcomp(dataset, center = TRUE, scale. = TRUE))
 ```
 Així, el PCA ens ha generat 8 components principals on, amb els 6 primers, ja tenim explicada el 91.36% de la variança de les dades. Es podria treballar amb aquest subconjunt però com tampoc tenim cap problema d'emmagatzematge o de potència de processat que ens obligui a reduir la dimensionalitat del dataset, treballaré amb el dataset original. A més a més, deixant de banda la variança explicada superior al 20% dels dos primers components, tots expliquen una variança singificativa del dataset; inclús l'últim component n'explica un 3.5%.
 
-
+*****
 ## Nou atribut
+*****
 
 Com he dit, només amb els components actuals no crec que pugui generar un model predictiu millor que els que hi ha, de fet, la cosa està molt complicada. Per tant, he decidit generar un nou atribut amb els ja existents. Aquest sirà una estimació de les probabilitats que té de sobreviure usant la lògica. En un accident d'aquest tipus el que crec que pasaria a l'hora de tenir elegibilitat per pujar a un bot i salvar-se seria: nens i menors d'edat > dones d'entre 18-39 > homes d'entre 18-39  > dones de més de 39 anys > homes de més de 39 anys. I dins, de cada grup, primer clarament anirien els que pertanyen a la primera clase, seguits dels de segona i, finalment, els de tercera clase.
 
@@ -315,7 +323,9 @@ Finalment, s'observa com a simple vista pareix que s'ha generat correctament; no
 
 Un cop ja tinc les dades tal i com vull procedeixo a fer-ne diferents tipus d'anàlisis
 
-## Nombre de clústers
+*****
+## Nombre de clústers (4.3.2)
+*****
 
 Investigant els posibles anàlisis m'ha paregut interessant descobrir el nombre de clústers/grups en que la llibreria cluster divideix el datset per a, d'aquesta manera, tenir una idea dels diferents tipus de pasatgers que havia al Titanic:
 ```{r message= FALSE, warning=FALSE}
@@ -354,8 +364,9 @@ plot(2:10,llista_resultats_quadrats[2:10],type="o",pch=15,col="blue",xlab="Clust
 ```
 En mirar les siluetes mitjanes de cada cluster es veu que el millor és 2 seguit de 3 i 5 clústers però en avaluar el millor nombre de clústers amb el mètode withinss, considera el millor model aquell que ofereix la menor suma dels quadrats de les distàncies dels punts de cada grup respecte al seu centre, pareix que la corba que mostra el gràfic s'estabilitza sobre 5 clùsters. D'aquesta manera, concloc que amb aquestes dades es diferèncien 5 tipus diferents de pasatgers al Titanic encara que també seria vàlid diferenciar-ne 2 tipus. En cas que acceptem com a vàlid els 5 grups, basant-me totalment amb el meu raonament, diria que potser són similars als 5 grups que he definit a l'hora de generar el nou atribut Priority, seria el que més sentit li veig i, a més a més, em va molt bé ja que coincideix amb el raonament que he plantejat en l'apartat anterior dontant-li més veracitat a l'atribut Priority. En canvi, també li veig sentit acceptar com a vàlid que hi ha 2 tipus diferents de pasatges ja que podria ser que siguin els que van sobreviure i els que no.
 
-
-## Comprovació de la normalitat i homogeneitat de la variança
+*****
+## Comprovació de la normalitat i homogeneitat de la variança (4.2)
+*****
 
 Avans de continuar en l'anàlisis i extracció de conclusions procedeixo a comprovar la distribució d'aquest dataset per veure si les dades segueixen una distirbució normal.
 Per fer-ho utilitzaré la proba de normalitat d'Anderson-Darling on, només acceptaré que els diferents atributs tenen una distribució normal si el p-valor obtingut per la prova és superior a 0.05:
@@ -391,7 +402,33 @@ for (i in 2:ncol(dataset)) {
 ```
 Ara si que s'han trobat mostres amb varainçes homogenies. Els atributs Age i Survived tenen un p-valor altissim (quasi d'1) indicant així que les seves variançes són molt homogenies i, per tant, indicant que l'edat i la supervivència estaven fortament correlacionats. Pel que fa a l'atribut Fare també té una variança homogènia a la de l'atribut Survived indicant així que el que va pagar el pasatger per pujar al Titanic està correlacionat amb les seves probabilitats de sobreivure. Són uns resultats molt lògics ja que és normal que s'intentés salvar primer als més joves i no deixem d'estar en un món capitalista així que els que tenen diners sempre tenen més ventatjes que els altres.
 
-## Diagrames de freqüència, taules i gràfiques
+Encara havent comprovat la normalitat utilitzant la llibreria nortest, faré una representació més visual de la distribució de les dades per veure com de llunyana és la seva distribució d'una distribució normal:
+```{r message= FALSE, warning=FALSE}
+# Extrec els noms de les columnes, els usare de titul epr als plots
+titles <- colnames(dataset)
+
+# Per cada columna del dataset menys la primera (correspon a l'atribut supervivència)
+for (i in 2:ncol(dataset)) {
+  # Genero el gràfic de quantils teòrics per a cada atribut
+  qqnorm(dataset[,i], main = titles[i])
+  # Afegeixo una linea de referència
+  qqline(dataset[,i], col = "steelblue", lwd = 2)
+}
+
+# Referències:
+# https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/qqnorm
+# https://stackoverflow.com/questions/30664012/extract-column-name-to-vector-by-calling-the-column-name
+```
+D'aquesta manera en observar la normalitat dels diferents atributs de manera visual s'observa com:
+1. Pclass, Sex i Embarked estàn molt lluny de seguir una distribució normal en ser atributs que només tenen 2 o 3 valors possibles.
+2. SibSp, Parch i Priority estàn lluny de seguir una distribució normal ja que encara tenint més rang de valors aquests estan mal distribuits pel que fa a freqüència d'aparició.
+3. Fare també està lluny de seguir una distribució normal perquè la gran majoria de valors de Fare són menors a 15$ encara tenint un rang de valors que va de 0 a més de 250.
+4. Age és l'atribut que més s'apropa a una distribució normal en haver pasatgers de totes les edats però, encara així, no segueix una distribució normal ja que hi ha molta gent d'entre 20 i 38 però hi ha més o menys al mateixa quantitat de gent entre 0 i 20 que entre 38 i 80 anys.
+ 
+
+*****
+## Diagrames de freqüència, taules i gràfiques (5 i 4.3.3)
+*****
 
 Continuo amb un anàlisis visual de les dades en forma de gràfics de barres; primerament discretitzaré la variable edat en 3 segments i, després, generaré gràfics de barres per veure la distribució de les variables Survival, Pclass, Age (segmentada) i Priority:
 ```{r message= FALSE, warning=FALSE}
@@ -440,6 +477,7 @@ ggplot(data = dataset,aes(x=segment_age,fill=Survived_categoric))+geom_bar(posit
 ```
 En el primer gràfic s'observa com, dels supervivents, hi havia moltes més dones que homes encara que la tripulació estés formada per més del doble d'homes que de dones. I, fixant-nos amb el gràfic de freqüències absolutes del sexe, s'observa com aquesta tendència varia entre classes on, de primera classe van sobreviure quasi la totalitat de les dones i el 30% dels homes mentre que, de tercera classe, van sobrevirue la meitat de les dones i un 13% dels homes veient així les grans diferències que havia entre ser home o dona i pertanyer a una o altra clase social (la clase del tiquet reflecteix la clase social). Ara, fixant-me amb el gràfic de supervivència segons l'edat, no es veuen grans diferències pel que fa a la supervivència dels menors d'edat i dels majoris de 40, potser es deu a que els majors de 40 anys solien pertanyer a la primera clase social. Finalment, mirant el gràfic de freqüències absolutes de l'edat segmentada, és més clara que mai aquesta diferència entre edat i clases socials; s'observa una gran caiguda en el percentatge de supervivents conforme canviem d'edat i clase social on, independentment de la teva edat, si pertanyies a la tercera clase social les teves probabilitats de sobrevirue eren menors que les de la resta de pasatgers.
 
+**4.3.3 - matrius de correlacions** 
 Un cop estudiades aquestes freqüències, procedeixo a analitzar estadisticament la correlació entre els diferents atributs del dataset. Aquesta corrlelació l'estudiaré amb el coeficient de correlació d'Spaerman ja que cap dels atributs segueix una distribució normal.
 ```{r message= FALSE, warning=FALSE}
 # Defineixo la matriu de correlació com una matriu de dos columnes i, després, li asigno nom a aquestes columnes
@@ -526,6 +564,7 @@ table_AgePclass
 # Referències:
 # https://www.datacamp.com/community/tutorials/contingency-tables-r
 ```
+**4.3.3 - tests estadistics de les taules de correlacions** 
 Avans d'analitzar aquestes taules, els hi aplico tests estadistics per veure la seva fiabilitat, és a dir, comprovo el grau de significança d'aquestes taules de contingència, per veure si els percentatges mostrats són singificatius, mitjançant el coeficient de Cramer-von Mises i el de contingència de Person (https://cran.r-project.org/web/packages/DescTools/DescTools.pdf):
 ```{r message= FALSE, warning=FALSE}
 # Instalo la llibreria DescTools si no ho està i la crido
@@ -568,12 +607,14 @@ dataset <- dataset[ , !(names(dataset) %in% c('segment_age', 'Survived_categoric
 ```
 
 *****
-# Generació i aplicació de models
+# Generació i aplicació de models (4.3.4 + 5 + 6 - generació d'un model estadistic, representació d'aquest i resolució del problema)
 *****
 
 Un cop netejades i analitzades les dades procedeixo a generar i aplicar models sobre aquestes per poder extraure conclusions més precises i participar en la competició.
 
+*****
 ## Arbre de decisió
+*****
 
 Genero el model d'arbre de decisió per veure les regles que troba per determinar si una persona sobreviurà o no. Aquesta generació de regles la faig per poder extreure regles/conclusions més concretes sobre la influència dels diferents atributs en la supervivència dels pasatgers.
 
@@ -651,8 +692,9 @@ Tal i com s'observa de l'arbre de decisió plotejat poca informació se'n pot ex
 
 Totes aquestes regles confirmen i milloren les conclusions que he anat hipotetitzant al llarg de la pràctica en indicar-nos les regles a seguir per saber si una persona va sobreviure o no. També ens indica el percentatge d'ús de cada atribut per saber si algú sobrevivia on, de més a menys percentatge d'ús van: Sex > Pclass > Priority > Embarked > Parch > Fare > Age. Resultat que concorda a la perfecció amb els altres estudis estadístics. Aquí també s'ha demostrat que l'atribut que he generat serveix d'algo ja que està inclos en les regles i té un elevat percentatge d'ús en el model, per tant, ja tinc més confiança en el seu ús per generar el model predictiu.
 
-
+*****
 ## Qualitat del model
+*****
 
 un cop generat el model d'arbre de decisió en comprovo la seva qualitat amb el conjunt de dades que he separat avans:
 ```{r}
@@ -672,8 +714,9 @@ CrossTable(test_classify, predict,prop.chisq  = FALSE, prop.c = FALSE, prop.r =F
 ```
 Tal i com s'observa el model funciona bastant bé, ha predit correctament 238 dels 296 valors; s'obseva com sobretot es bo predint la gent que morirà en només fallar 14 dels 186 registres mentre que predint la gent que va sobreviure n'ha encertat 66 de 110. D'aqeusta manera crec que he generat un bon model predictiu i, per tant, el dono per vàlid.
 
-
+*****
 ## Aplicació del model
+*****
 
 Finalment, per entrar en la competició, aplicaré un model com l'anterior a les dades de test. En aquest cas, encara no sent una bona pràctica, com per generar un model com més dades es tinguin millor, tornaré a crear el model d'arbre de decisió anterior però, aquest cop, usaré totes les dades; el problema es que no li podré calcular la qualitat però ja ho farà qui ho tingui que fer en la competició:
 ```{r message= FALSE, warning=FALSE}
@@ -749,12 +792,14 @@ final_predict
 Aquí es poden observar els valors predits per als difernets pasatgers del dataset de test i, per tant, dono per acabat aquest apartat.
 
 *****
-# Resolució del problema i conclusions
+# Resolució del problema i conclusions (6)
 *****
 
 Per acabar amb la pràctica resoldre el problema plantejat, és a dir, participaré en la competició i, finalment, faré un resum de les conclusions més rellevants que he anat extraient a mesura que he realitzat la pràctica.
 
+*****
 ## Participació en la competició
+*****
 
 Per entregar la meva proposta a la competició he de generar un CSV amb la forma que s'indica en les especificacions de la competició (https://www.kaggle.com/c/titanic/data?select=gender_submission.csv):
 ```{r}
@@ -773,7 +818,9 @@ write.csv(final_dataset, '.\\gender_submission.csv', row.names = FALSE)
 
 Un cop entregada, he obtingut un Score de 0.7799 que correspon a la posició 10109. No està tant malament tenint en compte que hi ha un total de 40679 participacions; el meu model està dins els 25% millors i, per tant, em dono per satisfet. Afegeixo la imatge score.PNG al repositori de GitHub per a que en quedi constància.
 
+*****
 ## Conclusions
+*****
 
 Els objectius d'aquesta pràctica ja estan complerts en haber pogut obtenir bones conclusions, un bon mnodel predicitiu i un resultat bó per participar en la competició del Titanic. Pel que fa a les conclusions extretes d'aquesta pràctica ja les he anat exposant però en faig un resum de les que considero més importants:
 1) Pareix que hi ha 5 clústers diferents, podria ser qeu fosin similars als 5 grups definits per generar l'atribut Priority.
